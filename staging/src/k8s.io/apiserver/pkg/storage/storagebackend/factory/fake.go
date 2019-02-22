@@ -2,6 +2,7 @@ package factory
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -26,6 +27,7 @@ func fakeStorage() storage.Interface {
 // cannot be updated correctly. May return nil if the requested object does not need metadata
 // from database.
 func (s pelotonStorage) UpdateObject(obj runtime.Object, resourceVersion uint64) error {
+	fmt.Printf("STORAGE: UpdateObject: %+v, %+v\n", obj, resourceVersion)
 	return nil
 }
 
@@ -34,18 +36,21 @@ func (s pelotonStorage) UpdateObject(obj runtime.Object, resourceVersion uint64)
 // from database. continueValue is optional and indicates that more results are available if
 // the client passes that value to the server in a subsequent call.
 func (s pelotonStorage) UpdateList(obj runtime.Object, resourceVersion uint64, continueValue string) error {
+	fmt.Printf("STORAGE: UpdateObject: %+v, %+v, %+v\n", obj, resourceVersion, continueValue)
 	return nil
 }
 
 // PrepareObjectForStorage should set SelfLink and ResourceVersion to the empty value. Should
 // return an error if the specified object cannot be updated.
 func (s pelotonStorage) PrepareObjectForStorage(obj runtime.Object) error {
+	fmt.Printf("STORAGE: PrepareObjectForStorage: %+v\n", obj)
 	return nil
 }
 
 // ObjectResourceVersion returns the resource version (for persistence) of the specified object.
 // Should return an error if the specified object does not have a persistable version.
 func (s pelotonStorage) ObjectResourceVersion(obj runtime.Object) (uint64, error) {
+	fmt.Printf("STORAGE: ObjectResourceVersion: %+v\n", obj)
 	return 0, nil
 }
 
@@ -55,6 +60,7 @@ func (s pelotonStorage) ObjectResourceVersion(obj runtime.Object) (uint64, error
 // behavior for non-zero watch is to watch the next value (if you pass
 // "1", you will see updates from "2" onwards).
 func (s pelotonStorage) ParseResourceVersion(resourceVersion string) (uint64, error) {
+	fmt.Printf("STORAGE: ParseResourceVersion: %+v\n", resourceVersion)
 	return 0, nil
 }
 
@@ -66,12 +72,14 @@ func (s pelotonStorage) Versioner() storage.Versioner {
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (s pelotonStorage) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
+	fmt.Printf("STORAGE: Create: %+v, %+v, %+v, %+v\n", key, obj, out, ttl)
 	return nil
 }
 
 // Delete removes the specified key and returns the value that existed at that spot.
 // If key didn't exist, it will return NotFound storage error.
 func (s pelotonStorage) Delete(ctx context.Context, key string, out runtime.Object, preconditions *storage.Preconditions) error {
+	fmt.Printf("STORAGE: Delete: %+v, %+v, %+v\n", key, out, preconditions)
 	return nil
 }
 
@@ -83,6 +91,7 @@ func (s pelotonStorage) Delete(ctx context.Context, key string, out runtime.Obje
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (s pelotonStorage) Watch(ctx context.Context, key string, resourceVersion string, p storage.SelectionPredicate) (watch.Interface, error) {
+	fmt.Printf("STORAGE: Watch: %+v, %+v, %+v\n", key, resourceVersion, p)
 	return pelotonWatchObj{}, nil
 }
 
@@ -94,6 +103,7 @@ func (s pelotonStorage) Watch(ctx context.Context, key string, resourceVersion s
 // If resource version is "0", this interface will list current objects directory defined by key
 // and send them in "ADDED" events, before watch starts.
 func (s pelotonStorage) WatchList(ctx context.Context, key string, resourceVersion string, p storage.SelectionPredicate) (watch.Interface, error) {
+	fmt.Printf("STORAGE: WatchList: %+v, %+v, %+v\n", key, resourceVersion, p)
 	return pelotonWatchObj{}, nil
 }
 
@@ -103,6 +113,7 @@ func (s pelotonStorage) WatchList(ctx context.Context, key string, resourceVersi
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (s pelotonStorage) Get(ctx context.Context, key string, resourceVersion string, objPtr runtime.Object, ignoreNotFound bool) error {
+	fmt.Printf("STORAGE: Get: %+v, %+v, %+v, %+v\n", key, resourceVersion, objPtr, ignoreNotFound)
 	return nil
 }
 
@@ -111,6 +122,7 @@ func (s pelotonStorage) Get(ctx context.Context, key string, resourceVersion str
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (s pelotonStorage) GetToList(ctx context.Context, key string, resourceVersion string, p storage.SelectionPredicate, listObj runtime.Object) error {
+	fmt.Printf("STORAGE: GetToList: %+v, %+v, %+v, %+v\n", key, resourceVersion, p, listObj)
 	return nil
 }
 
@@ -119,6 +131,7 @@ func (s pelotonStorage) GetToList(ctx context.Context, key string, resourceVersi
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (s pelotonStorage) List(ctx context.Context, key string, resourceVersion string, p storage.SelectionPredicate, listObj runtime.Object) error {
+	fmt.Printf("STORAGE: List: %+v, %+v, %+v, %+v\n", key, resourceVersion, p, listObj)
 	return nil
 }
 
@@ -161,5 +174,6 @@ func (s pelotonStorage) GuaranteedUpdate(
 
 // Count returns number of different entries under the key (generally being path prefix).
 func (s pelotonStorage) Count(key string) (int64, error) {
+	fmt.Printf("STORAGE: Count: %+v\n", key)
 	return 0, nil
 }
