@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/apiserver/pkg/storage/etcd"
 )
 
 type pelotonStorage struct{}
@@ -23,49 +24,8 @@ func fakeStorage() storage.Interface {
 	return pelotonStorage{}
 }
 
-// UpdateObject sets storage metadata into an API object. Returns an error if the object
-// cannot be updated correctly. May return nil if the requested object does not need metadata
-// from database.
-func (s pelotonStorage) UpdateObject(obj runtime.Object, resourceVersion uint64) error {
-	fmt.Printf("STORAGE: UpdateObject: %+v, %+v\n", obj, resourceVersion)
-	return nil
-}
-
-// UpdateList sets the resource version into an API list object. Returns an error if the object
-// cannot be updated correctly. May return nil if the requested object does not need metadata
-// from database. continueValue is optional and indicates that more results are available if
-// the client passes that value to the server in a subsequent call.
-func (s pelotonStorage) UpdateList(obj runtime.Object, resourceVersion uint64, continueValue string) error {
-	fmt.Printf("STORAGE: UpdateObject: %+v, %+v, %+v\n", obj, resourceVersion, continueValue)
-	return nil
-}
-
-// PrepareObjectForStorage should set SelfLink and ResourceVersion to the empty value. Should
-// return an error if the specified object cannot be updated.
-func (s pelotonStorage) PrepareObjectForStorage(obj runtime.Object) error {
-	fmt.Printf("STORAGE: PrepareObjectForStorage: %+v\n", obj)
-	return nil
-}
-
-// ObjectResourceVersion returns the resource version (for persistence) of the specified object.
-// Should return an error if the specified object does not have a persistable version.
-func (s pelotonStorage) ObjectResourceVersion(obj runtime.Object) (uint64, error) {
-	fmt.Printf("STORAGE: ObjectResourceVersion: %+v\n", obj)
-	return 0, nil
-}
-
-// ParseResourceVersion takes a resource version argument and
-// converts it to the storage backend. For watch we should pass to helper.Watch().
-// Because resourceVersion is an opaque value, the default watch
-// behavior for non-zero watch is to watch the next value (if you pass
-// "1", you will see updates from "2" onwards).
-func (s pelotonStorage) ParseResourceVersion(resourceVersion string) (uint64, error) {
-	fmt.Printf("STORAGE: ParseResourceVersion: %+v\n", resourceVersion)
-	return 0, nil
-}
-
 func (s pelotonStorage) Versioner() storage.Versioner {
-	return s
+	return etcd.APIObjectVersioner{}
 }
 
 // Create adds a new object at a key unless it already exists. 'ttl' is time-to-live
