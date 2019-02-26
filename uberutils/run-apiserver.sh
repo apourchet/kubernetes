@@ -1,4 +1,4 @@
-KUBE_CERTS=${KUBE_CERTS:-/Users/pourchet/p2k/milestone0/certs}
+KUBE_CERTS=${KUBE_CERTS:-$PWD/uberutils/certs}
 KUBE_ADMISSION_CONTROL='' kube-apiserver \
     --authorization-mode=Node,RBAC \
     --advertise-address=127.0.0.1 \
