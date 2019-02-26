@@ -28,7 +28,7 @@ type DestroyFunc func()
 
 // Create creates a storage backend based on given config.
 func Create(c storagebackend.Config) (storage.Interface, DestroyFunc, error) {
-	return fakeStorage(), func() {}, nil
+	return fakeStorage(c), func() {}, nil
 	switch c.Type {
 	case "etcd2":
 		return nil, nil, fmt.Errorf("%v is no longer a supported storage backend", c.Type)

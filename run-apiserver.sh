@@ -1,4 +1,4 @@
-kube-apiserver \
+KUBE_ADMISSION_CONTROL='' kube-apiserver \
     --authorization-mode=Node,RBAC \
     --advertise-address=127.0.0.1 \
     --allow-privileged=true \
