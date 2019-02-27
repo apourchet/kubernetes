@@ -25,4 +25,5 @@ KUBE_ADMISSION_CONTROL='' kube-apiserver \
     --requestheader-group-headers=X-Remote-Group \
     --requestheader-username-headers=X-Remote-User \
     --secure-port=8443 \
+    --watch-cache=false \
     --service-cluster-ip-range=10.96.0.0/12

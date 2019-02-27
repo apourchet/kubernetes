@@ -49,6 +49,11 @@ func (obj *pelotonWatchObj) ResultChan() <-chan watch.Event {
 	return obj.results
 }
 
+type storageValue struct {
+	content []byte
+	version int64
+}
+
 func fakeStorage(c storagebackend.Config) storage.Interface {
 	transformer := c.Transformer
 	if transformer == nil {
@@ -73,7 +78,7 @@ func (s *pelotonStorage) Versioner() storage.Versioner {
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (s *pelotonStorage) Get(ctx context.Context, key string, resourceVersion string, objPtr runtime.Object, ignoreNotFound bool) error {
-	fmt.Printf("STORAGE: Get: %+v, %+v, %+v, %+v\n", key, resourceVersion, objPtr, ignoreNotFound)
+	fmt.Printf("STORAGE_IN: Get: %+v, %+v, %+v, %+v\n", key, resourceVersion, objPtr, ignoreNotFound)
 	key = path.Join(s.pathPrefix, key)
 	s.Lock()
 	defer s.Unlock()
@@ -97,7 +102,7 @@ func (s *pelotonStorage) Get(ctx context.Context, key string, resourceVersion st
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (s *pelotonStorage) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
-	fmt.Printf("STORAGE: Create: %+v, %+v, %+v, %+v\n", key, obj, out, ttl)
+	fmt.Printf("STORAGE_IN: Create: %+v, %+v, %+v, %+v\n", key, obj, out, ttl)
 	if version, err := s.versioner.ObjectResourceVersion(obj); err == nil && version != 0 {
 		return errors.New("resourceVersion should not be set on objects to be created")
 	}
@@ -120,6 +125,7 @@ func (s *pelotonStorage) Create(ctx context.Context, key string, obj, out runtim
 	if _, found := s.objs[key]; found {
 		return storage.NewKeyExistsError(key, 0)
 	}
+	fmt.Println("STORAGE_DEBUG:", key)
 	s.objs[key] = newData
 
 	if out != nil {
@@ -131,7 +137,7 @@ func (s *pelotonStorage) Create(ctx context.Context, key string, obj, out runtim
 // Delete removes the specified key and returns the value that existed at that spot.
 // If key didn't exist, it will return NotFound storage error.
 func (s *pelotonStorage) Delete(ctx context.Context, key string, out runtime.Object, preconditions *storage.Preconditions) error {
-	fmt.Printf("STORAGE: Delete: %+v, %+v, %+v\n", key, out, preconditions)
+	fmt.Printf("STORAGE_IN: Delete: %+v, %+v, %+v\n", key, out, preconditions)
 	_, err := conversion.EnforcePtr(out)
 	if err != nil {
 		panic("unable to convert output object to pointer")
@@ -152,7 +158,7 @@ func (s *pelotonStorage) Delete(ctx context.Context, key string, out runtime.Obj
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (s *pelotonStorage) Watch(ctx context.Context, key string, resourceVersion string, p storage.SelectionPredicate) (watch.Interface, error) {
-	fmt.Printf("STORAGE: Watch: %+v, %+v, %+v\n", key, resourceVersion, p)
+	fmt.Printf("STORAGE_IN: Watch: %+v, %+v, %+v\n", key, resourceVersion, p)
 	return &pelotonWatchObj{make(chan watch.Event)}, nil
 }
 
@@ -164,7 +170,7 @@ func (s *pelotonStorage) Watch(ctx context.Context, key string, resourceVersion 
 // If resource version is "0", this interface will list current objects directory defined by key
 // and send them in "ADDED" events, before watch starts.
 func (s *pelotonStorage) WatchList(ctx context.Context, key string, resourceVersion string, p storage.SelectionPredicate) (watch.Interface, error) {
-	fmt.Printf("STORAGE: WatchList: %+v, %+v, %+v\n", key, resourceVersion, p)
+	fmt.Printf("STORAGE_IN: WatchList: %+v, %+v, %+v\n", key, resourceVersion, p)
 	return &pelotonWatchObj{make(chan watch.Event)}, nil
 }
 
@@ -173,7 +179,7 @@ func (s *pelotonStorage) WatchList(ctx context.Context, key string, resourceVers
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (s *pelotonStorage) GetToList(ctx context.Context, key string, resourceVersion string, pred storage.SelectionPredicate, listObj runtime.Object) error {
-	fmt.Printf("STORAGE: GetToList: %+v, %+v, %+v, %+v\n", key, resourceVersion, pred, listObj)
+	fmt.Printf("STORAGE_IN: GetToList: %+v, %+v, %+v, %+v\n", key, resourceVersion, pred, listObj)
 	listPtr, err := meta.GetItemsPtr(listObj)
 	if err != nil {
 		return err
@@ -212,7 +218,7 @@ func (s *pelotonStorage) GetToList(ctx context.Context, key string, resourceVers
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (s *pelotonStorage) List(ctx context.Context, key string, resourceVersion string, pred storage.SelectionPredicate, listObj runtime.Object) error {
-	fmt.Printf("STORAGE: List: %+v, %+v, %+v, %+v\n", key, resourceVersion, pred, listObj)
+	fmt.Printf("STORAGE_IN: List: %+v, %+v, %+v, %+v\n", key, resourceVersion, pred, listObj)
 	listPtr, err := meta.GetItemsPtr(listObj)
 	if err != nil {
 		return storage.NewInternalErrorf(err.Error())
@@ -235,18 +241,28 @@ func (s *pelotonStorage) List(ctx context.Context, key string, resourceVersion s
 	s.Lock()
 	defer s.Unlock()
 	for k, content := range s.objs {
-		if !strings.HasPrefix(key, k) {
+		fmt.Println("STORAGE_DEBUG:", k, key)
+		if !strings.HasPrefix(k, key) {
 			continue
 		}
+		fmt.Printf("STORAGE_DEBUG: ADDING %s\n", k)
 		obj, _, err := s.codec.Decode(content, nil, reflect.New(v.Type().Elem()).Interface().(runtime.Object))
 		if err != nil {
+			fmt.Printf("STORAGE_ERROR: %+v, %+v\n", k, err)
 			return storage.NewInternalErrorf(err.Error())
 		}
+
+		fmt.Printf("STORAGE_DEBUG: %+v, %+v", k, obj)
 		if matched, err := pred.Matches(obj); err == nil && matched {
 			v.Set(reflect.Append(v, reflect.ValueOf(obj).Elem()))
+		} else if err != nil {
+			fmt.Println("STORAGE_ERR:", err)
+		} else if !matched {
+			fmt.Println("STORAGE: NOT MATCHED")
 		}
 	}
 
+	fmt.Printf("STORAGE_OUT: List: %+v, %+v\n", key, listObj)
 	return nil
 }
 
@@ -297,6 +313,6 @@ func (s *pelotonStorage) Count(key string) (int64, error) {
 			count++
 		}
 	}
-	fmt.Printf("STORAGE: Count: %+v, %+v\n", key, count)
+	fmt.Printf("STORAGE_OUT: Count: %+v, %+v\n", key, count)
 	return count, nil
 }
