@@ -298,8 +298,47 @@ func (s *pelotonStorage) List(ctx context.Context, key string, resourceVersion s
 //    }
 // })
 func (s *pelotonStorage) GuaranteedUpdate(
-	ctx context.Context, key string, ptrToType runtime.Object, ignoreNotFound bool,
-	precondtions *storage.Preconditions, tryUpdate storage.UpdateFunc, suggestion ...runtime.Object) error {
+	ctx context.Context, key string, out runtime.Object, ignoreNotFound bool,
+	preconditions *storage.Preconditions, tryUpdate storage.UpdateFunc, suggestion ...runtime.Object) error {
+	fmt.Printf("STORAGE_IN: Update: %+v, %+v, %+v\n", key, preconditions, suggestion)
+
+	key = path.Join(s.pathPrefix, key)
+	s.Lock()
+	defer s.Unlock()
+	content, found := s.objs[key]
+	if !found {
+		if ignoreNotFound {
+			return runtime.SetZeroValue(out)
+		}
+		return storage.NewKeyNotFoundError(key, 0)
+	}
+
+	fmt.Printf("STORAGE_DEBUG: Update: FOUND\n")
+	data, _, err := s.transformer.TransformFromStorage(content, authenticatedDataString(key))
+	if err != nil {
+		return storage.NewInternalError(err.Error())
+	} else if err := runtime.DecodeInto(s.codec, data, out); err != nil {
+		return storage.NewInternalError(err.Error())
+	}
+
+	fmt.Printf("STORAGE_DEBUG: Update: %+v\n", out)
+	ret, _, err := tryUpdate(out, storage.ResponseMeta{TTL: 100000000})
+	if err != nil {
+		fmt.Println("STORAGE_ERROR:", err)
+		return storage.NewInternalError(err.Error())
+	}
+
+	fmt.Printf("STORAGE_DEBUG: Update: UPDATED %+v\n", ret)
+	if data, err = runtime.Encode(s.codec, ret); err != nil {
+		return storage.NewInternalError(err.Error())
+	} else if data, err = s.transformer.TransformToStorage(data, authenticatedDataString(key)); err != nil {
+		return storage.NewInternalError(err.Error())
+	}
+	s.objs[key] = data
+	if out != nil {
+		return runtime.DecodeInto(s.codec, data, out)
+	}
+	fmt.Printf("STORAGE_OUT: Update: %+v, %+v\n", key, out)
 	return nil
 }
 

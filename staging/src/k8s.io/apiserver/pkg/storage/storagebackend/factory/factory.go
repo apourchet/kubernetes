@@ -28,12 +28,12 @@ type DestroyFunc func()
 
 // Create creates a storage backend based on given config.
 func Create(c storagebackend.Config) (storage.Interface, DestroyFunc, error) {
-	return fakeStorage(c), func() {}, nil
 	switch c.Type {
 	case "etcd2":
 		return nil, nil, fmt.Errorf("%v is no longer a supported storage backend", c.Type)
 	case storagebackend.StorageTypeUnset, storagebackend.StorageTypeETCD3:
-		return newETCD3Storage(c)
+		iface, destroy, err := newETCD3Storage(c)
+		return &printedStorage{iface}, destroy, err
 	default:
 		return nil, nil, fmt.Errorf("unknown storage type: %s", c.Type)
 	}
@@ -41,7 +41,6 @@ func Create(c storagebackend.Config) (storage.Interface, DestroyFunc, error) {
 
 // CreateHealthCheck creates a healthcheck function based on given config.
 func CreateHealthCheck(c storagebackend.Config) (func() error, error) {
-	return func() error { return nil }, nil
 	switch c.Type {
 	case "etcd2":
 		return nil, fmt.Errorf("%v is no longer a supported storage backend", c.Type)
