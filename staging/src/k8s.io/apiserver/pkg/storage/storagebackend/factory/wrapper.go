@@ -73,8 +73,8 @@ func (s *printedStorage) GuaranteedUpdate(ctx context.Context, key string, out r
 }
 
 func (s *printedStorage) Count(key string) (int64, error) {
-	fmt.Printf("STORAGE_IN: Count: %s", key)
+	fmt.Printf("STORAGE_IN: Count: %s\n", key)
 	cnt, err := s.iface.Count(key)
-	fmt.Printf("STORAGE_OUT: Count: %+v, %+v", cnt, err)
+	fmt.Printf("STORAGE_OUT: Count: %+v, %+v\n", cnt, err)
 	return cnt, err
 }
